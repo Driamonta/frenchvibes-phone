@@ -1,0 +1,119 @@
+<!doctype html>
+<!-- Страница для телефона: фразы приходят в самой ссылке (после #) — на сервер они не попадают и нигде не хранятся.
+     Срок жизни тоже в ссылке: после него страница их не показывает и стирает ссылку из адресной строки. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0F1E">
+<meta name="robots" content="noindex">
+<title>French Vibes ✦</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #0B0F1E; --surf: rgba(255,255,255,.06); --surf2: rgba(255,255,255,.1); --line: rgba(255,255,255,.1);
+  --ink: #F4F2FF; --mute: #9A9CC0; --acc: #FF8FA8; --acc2: #FFC98A; --grad: linear-gradient(135deg, #FFC98A, #FF8FA8 55%, #B79CFF);
+  --disp: "DM Serif Display", Georgia, serif; --ui: "Manrope", system-ui, sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { min-height: 100dvh; font: 15px/1.45 var(--ui); color: var(--ink); background: var(--bg);
+  padding: max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom)); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(60% 40% at 10% 0%, rgba(255,120,150,.22), transparent 70%),
+              radial-gradient(60% 40% at 100% 100%, rgba(120,110,255,.22), transparent 70%); }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+.brand { font: 22px var(--disp); }
+.brand i { color: var(--acc); }
+h1 { font: 30px/1.15 var(--disp); margin: 18px 0 6px; }
+.meta { color: var(--mute); font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pill { background: var(--surf2); border-radius: 99px; padding: 3px 10px; }
+.all { width: 100%; margin: 18px 0 14px; height: 52px; border-radius: 99px; background: var(--grad); color: #1B0E1A; font-weight: 700; font-size: 16px; }
+.row { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 20px; background: var(--surf);
+  border: 1px solid var(--line); margin-bottom: 10px; transition: border-color .3s, background .3s; }
+.row.on { border-color: var(--acc); background: rgba(255,143,168,.08); }
+.play { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--surf2); color: var(--acc); font-size: 15px; }
+.fr { font: 20px/1.25 var(--disp); }
+.cyr { color: var(--acc2); font-size: 13px; margin-top: 3px; }
+.tr { color: var(--mute); font-size: 14px; margin-top: 2px; }
+.slow { flex: none; font-size: 18px; width: 36px; height: 44px; opacity: .8; }
+.gone { text-align: center; margin-top: 30vh; }
+.gone .big { font-size: 52px; }
+.gone p { color: var(--mute); margin-top: 10px; }
+.foot { color: var(--mute); font-size: 12px; text-align: center; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="brand">French <i>Vibes</i> ✦</div>
+<main id="app"></main>
+<script>
+const app = document.getElementById("app");
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function gone(title, text) {
+  history.replaceState(null, "", location.pathname);   // ссылку с фразами — из адресной строки и истории вкладки
+  app.innerHTML = `<div class="gone"><div class="big">🥐</div><h1>${title}</h1><p>${text}</p></div>`;
+}
+
+async function load() {
+  const b64 = location.hash.slice(1).replace(/-/g, "+").replace(/_/g, "/");
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return JSON.parse(await new Response(stream).text());
+}
+
+function left(ms, ua) {
+  const h = Math.ceil(ms / 3600e3);
+  return h < 48 ? (ua ? `ще ${h} год.` : `ещё ${h} ч`) : (ua ? `ще ${Math.ceil(h / 24)} дн.` : `ещё ${Math.ceil(h / 24)} дн.`);
+}
+
+let voice = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith("fr"));
+  voice = vs.find((v) => /fr[-_]FR/i.test(v.lang)) || vs[0] || null;
+}
+function speak(text, slow) {
+  return new Promise((done) => {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "fr-FR";
+    if (voice) u.voice = voice;
+    u.rate = slow ? 0.6 : 0.9;
+    u.onend = u.onerror = done;
+    speechSynthesis.speak(u);
+  });
+}
+
+async function main() {
+  if (!location.hash) return gone("Bonjour !", "Открой ссылку из QR-кода в French Vibes ✦");
+  let d;
+  try { d = await load(); } catch (e) { return gone("Oups…", "Ссылка повреждена — сделай новый QR-код в приложении"); }
+  const ua = d.l === "ua";
+  if (Date.now() / 1000 > d.e) return gone(ua ? "Посилання зникло" : "Ссылка исчезла", ua ? "Час вийшов — зроби новий QR-код у French Vibes ✦" : "Время вышло — сделай новый QR-код в French Vibes ✦");
+  setTimeout(() => location.reload(), Math.min(d.e * 1000 - Date.now() + 500, 2 ** 31 - 1));   // исчезнет и у открытой страницы
+  const until = new Date(d.e * 1000).toLocaleString(ua ? "uk-UA" : "ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  app.innerHTML = `<h1>${esc(d.t)}</h1>
+    <div class="meta"><span class="pill">${d.p.length} фраз</span><span>⏳ до ${esc(until)} · ${left(d.e * 1000 - Date.now(), ua)}</span></div>
+    <button class="all" id="all">▶  ${ua ? "Послухати все підряд" : "Послушать все подряд"}</button>
+    ${d.p.map(([fr, tr, cyr], i) => `<div class="row" data-i="${i}"><button class="play" data-i="${i}">▶</button>
+      <div style="flex:1;min-width:0"><div class="fr">${esc(fr)}</div>${cyr ? `<div class="cyr">${esc(cyr)}</div>` : ""}<div class="tr">${esc(tr)}</div></div>
+      <button class="slow" data-i="${i}" data-slow="1" title="${ua ? "Повільно" : "Медленно"}">🐢</button></div>`).join("")}
+    <div class="foot">${ua ? "Фрази живуть лише в цьому посиланні — ніде не зберігаються" : "Фразы живут только в этой ссылке — нигде не хранятся"}</div>`;
+  const rows = [...document.querySelectorAll(".row")];
+  let run = 0;
+  const playOne = async (i, slow) => {
+    rows.forEach((r) => r.classList.toggle("on", r === rows[i]));
+    await speak(d.p[i][0], slow);
+    rows[i].classList.remove("on");
+  };
+  app.onclick = async (e) => {
+    const b = e.target.closest("[data-i]");
+    if (e.target.closest("#all")) {
+      const me = ++run;
+      for (let i = 0; i < d.p.length && me === run; i++) { rows[i].scrollIntoView({ behavior: "smooth", block: "center" }); await playOne(i); await new Promise((r) => setTimeout(r, 600)); }
+    } else if (b) { run++; playOne(+b.dataset.i, !!b.dataset.slow); }
+  };
+}
+if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+main();
+</script>
+</body>
+</html>
